@@ -1,0 +1,8 @@
+.env
+pizza_env/
+hackapizza_dataset/
+datapizza_ai_practice/
+datapizza_ai_practice copy/
+question_classifier.py
+classified_questions.json
+hackapizza_solution/data/

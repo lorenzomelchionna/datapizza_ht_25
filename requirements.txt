@@ -1,0 +1,10 @@
+datapizza-ai
+kaggle
+pandas
+matplotlib
+seaborn
+beautifulsoup4
+docling
+qdrant-client
+python-dotenv
+pydantic
