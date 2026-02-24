@@ -27,15 +27,15 @@ def get_ingredient_percentages(dish_name: str) -> str:
     pct = _load_percentages()
     if dish_name in pct:
         lines = [f"- {ing}: {val}%" for ing, val in pct[dish_name].items()]
-        return f"Percentuali ingredienti per '{dish_name}':\n" + "\n".join(lines)
+        return f"Ingredient percentages for '{dish_name}':\n" + "\n".join(lines)
     # Try partial match
     for name, ings in pct.items():
         if dish_name.lower() in name.lower() or name.lower() in dish_name.lower():
             lines = [f"- {ing}: {val}%" for ing, val in ings.items()]
-            return f"Percentuali ingredienti per '{name}':\n" + "\n".join(lines)
+            return f"Ingredient percentages for '{name}':\n" + "\n".join(lines)
     return (
-        f"Nessuna percentuale disponibile per '{dish_name}'. "
-        f"Piatti con dati disponibili: {', '.join(pct.keys())}"
+        f"No percentage available for '{dish_name}'. "
+        f"Dishes with available data: {', '.join(pct.keys())}"
     )
 
 
@@ -45,9 +45,9 @@ def get_substance_limits(substance: str) -> str:
     Returns a description of how to check compliance. The actual coefficients and
     formulas must be retrieved via RAG on the codice_galattico collection."""
     return (
-        f"Per verificare i limiti legali di '{substance}', consulta il Codice Galattico:\n"
-        f"1. Trova il coefficiente della sostanza (CRP, IPM, IBX, ecc.)\n"
-        f"2. Applica la formula: se coefficiente > soglia, la % massima consentita è limitata\n"
-        f"3. Confronta con la percentuale effettiva del piatto (dai blogpost)\n"
-        f"Usa l'agente Compliance con RAG sulla collection 'codice_galattico' per i valori esatti."
+        f"To verify legal limits for '{substance}', consult the Codice Galattico:\n"
+        f"1. Find the substance coefficient (CRP, IPM, IBX, etc.)\n"
+        f"2. Apply the formula: if coefficient > threshold, max allowed % is limited\n"
+        f"3. Compare with the actual dish percentage (from blogposts)\n"
+        f"Use the Compliance agent with RAG on collection 'codice_galattico' for exact values."
     )

@@ -20,8 +20,8 @@ def classify_question(question: str) -> str:
         score = result.categories[code]
         sources = ", ".join(cat.data_sources)
         lines.append(
-            f"  {code} ({score:.0%}): {cat.name} - {cat.description_it} [Fonti: {sources}]"
+            f"  {code} ({score:.0%}): {cat.name} - {cat.description_it} [Sources: {sources}]"
         )
-    composite = "COMPOSITA" if result.is_composite else "SINGOLA"
-    header = f"Classificazione: {composite}\nCategorie rilevate:"
+    composite = "COMPOSITE" if result.is_composite else "SINGLE"
+    header = f"Classification: {composite}\nRelevant categories:"
     return header + "\n" + "\n".join(lines)

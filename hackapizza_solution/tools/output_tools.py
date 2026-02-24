@@ -54,5 +54,5 @@ def map_dishes_to_ids(dish_names: str) -> str:
     ids_str = ",".join(str(i) for i in found_ids)
     result = f"IDS: {ids_str}"
     if warnings:
-        result += f"\nNON TROVATI: {', '.join(warnings)}"
+        result += f"\nNOT FOUND: {', '.join(warnings)}"
     return result

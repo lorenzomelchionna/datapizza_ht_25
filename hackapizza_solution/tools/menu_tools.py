@@ -29,11 +29,11 @@ def search_dishes_by_ingredient(ingredient: str) -> str:
         for dish in menu["dishes"]:
             if any(ingredient_lower in ing.lower() for ing in dish["ingredients"]):
                 results.append(
-                    f"- {dish['name']} (ristorante: {menu['restaurant']}, pianeta: {menu['planet']})"
+                    f"- {dish['name']} (restaurant: {menu['restaurant']}, planet: {menu['planet']})"
                 )
     if not results:
-        return f"Nessun piatto trovato con l'ingrediente '{ingredient}'."
-    return f"Piatti con '{ingredient}' ({len(results)} risultati):\n" + "\n".join(results)
+        return f"No dish found with ingredient '{ingredient}'."
+    return f"Dishes with '{ingredient}' ({len(results)} results):\n" + "\n".join(results)
 
 
 @tool
@@ -46,11 +46,11 @@ def search_dishes_by_technique(technique: str) -> str:
         for dish in menu["dishes"]:
             if any(technique_lower in tech.lower() for tech in dish["techniques"]):
                 results.append(
-                    f"- {dish['name']} (ristorante: {menu['restaurant']}, pianeta: {menu['planet']})"
+                    f"- {dish['name']} (restaurant: {menu['restaurant']}, planet: {menu['planet']})"
                 )
     if not results:
-        return f"Nessun piatto trovato con la tecnica '{technique}'."
-    return f"Piatti con tecnica '{technique}' ({len(results)} risultati):\n" + "\n".join(results)
+        return f"No dish found with technique '{technique}'."
+    return f"Dishes with technique '{technique}' ({len(results)} results):\n" + "\n".join(results)
 
 
 @tool
@@ -64,13 +64,13 @@ def filter_dishes_by_restaurant(restaurant: str) -> str:
             for dish in menu["dishes"]:
                 ings = ", ".join(dish["ingredients"])
                 techs = ", ".join(dish["techniques"])
-                lines.append(f"- {dish['name']}\n  Ingredienti: {ings}\n  Tecniche: {techs}")
+                lines.append(f"- {dish['name']}\n  Ingredients: {ings}\n  Techniques: {techs}")
             return (
-                f"Ristorante: {menu['restaurant']} (pianeta: {menu['planet']})\n"
+                f"Restaurant: {menu['restaurant']} (planet: {menu['planet']})\n"
                 f"Chef: {menu['chef']['name']}\n"
-                f"Piatti ({len(menu['dishes'])}):\n" + "\n".join(lines)
+                f"Dishes ({len(menu['dishes'])}):\n" + "\n".join(lines)
             )
-    return f"Ristorante '{restaurant}' non trovato."
+    return f"Restaurant '{restaurant}' not found."
 
 
 @tool
@@ -83,11 +83,11 @@ def filter_dishes_by_planet(planet: str) -> str:
         if planet_lower in menu["planet"].lower():
             for dish in menu["dishes"]:
                 results.append(
-                    f"- {dish['name']} (ristorante: {menu['restaurant']})"
+                    f"- {dish['name']} (restaurant: {menu['restaurant']})"
                 )
     if not results:
-        return f"Nessun piatto trovato sul pianeta '{planet}'."
-    return f"Piatti sul pianeta '{planet}' ({len(results)} risultati):\n" + "\n".join(results)
+        return f"No dish found on planet '{planet}'."
+    return f"Dishes on planet '{planet}' ({len(results)} results):\n" + "\n".join(results)
 
 
 @tool
@@ -100,11 +100,11 @@ def get_chef_info(restaurant: str) -> str:
             chef = menu["chef"]
             licenses_str = ", ".join(f"{k}: {v}" for k, v in chef["licenses"].items())
             return (
-                f"Ristorante: {menu['restaurant']} (pianeta: {menu['planet']})\n"
+                f"Restaurant: {menu['restaurant']} (planet: {menu['planet']})\n"
                 f"Chef: {chef['name']}\n"
-                f"Licenze: {licenses_str}"
+                f"Licenses: {licenses_str}"
             )
-    return f"Chef non trovato per ristorante '{restaurant}'."
+    return f"Chef not found for restaurant '{restaurant}'."
 
 
 @tool
@@ -119,6 +119,6 @@ def get_all_dishes_with_details() -> str:
             ings = ", ".join(dish["ingredients"])
             techs = ", ".join(dish["techniques"])
             lines.append(f"  {dish['name']}")
-            lines.append(f"    Ingredienti: {ings}")
-            lines.append(f"    Tecniche: {techs}")
+            lines.append(f"    Ingredients: {ings}")
+            lines.append(f"    Techniques: {techs}")
     return "\n".join(lines)

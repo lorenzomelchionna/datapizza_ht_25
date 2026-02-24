@@ -34,9 +34,9 @@ def get_chefs_with_license(license_type: str, min_grade: int) -> str:
                 f"- {chef['name']} ({menu['restaurant']}, {menu['planet']}) - {license_type}: {grade}"
             )
     if not results:
-        return f"Nessun chef trovato con licenza {license_type} >= grado {min_grade}."
+        return f"No chef found with license {license_type} >= grade {min_grade}."
     return (
-        f"Chef con licenza {license_type} >= grado {min_grade} ({len(results)} risultati):\n"
+        f"Chefs with license {license_type} >= grade {min_grade} ({len(results)} results):\n"
         + "\n".join(results)
     )
 
@@ -47,9 +47,9 @@ def get_required_licenses_for_technique(technique: str) -> str:
     This information comes from the Codice Galattico and Manuale di Cucina.
     Returns a description of the requirements that should be verified against chef licenses."""
     return (
-        f"Per determinare le licenze richieste per la tecnica '{technique}', "
-        f"consulta il Codice Galattico (sezione sulle tecniche regolamentate) e il "
-        f"Manuale di Cucina di Sirius Cosmo (sezione sulle licenze per categoria). "
-        f"Le tecniche di ogni categoria richiedono licenze specifiche con un grado minimo. "
-        f"Usa l'agente Manual Expert o Order Expert con RAG per ottenere i dettagli esatti."
+        f"To determine the licenses required for technique '{technique}', "
+        f"consult the Codice Galattico (section on regulated techniques) and the "
+        f"Manuale di Cucina di Sirius Cosmo (section on licenses by category). "
+        f"Each technique category requires specific licenses with a minimum grade. "
+        f"Use the Manual Expert or Order Expert agent with RAG to get the exact details."
     )

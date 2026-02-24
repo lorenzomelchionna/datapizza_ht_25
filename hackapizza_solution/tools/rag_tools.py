@@ -53,7 +53,7 @@ def _rag_query(query: str, collection_name: str, k: int = 5) -> str:
         k=k,
     )
     if not results:
-        return f"Nessun risultato trovato nella collection '{collection_name}' per: {query}"
+        return f"No result found in collection '{collection_name}' for: {query}"
 
     chunks_text = []
     for i, chunk in enumerate(results, 1):

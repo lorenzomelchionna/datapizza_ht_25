@@ -32,15 +32,15 @@ def get_planets_within_radius(origin: str, radius: float) -> str:
     Includes the origin planet itself (distance 0)."""
     distances = _load_distances()
     if origin not in distances:
-        return f"Pianeta '{origin}' non trovato. Pianeti validi: {', '.join(distances.keys())}"
+        return f"Planet '{origin}' not found. Valid planets: {', '.join(distances.keys())}"
     nearby = []
     for planet, dist in distances[origin].items():
         if dist <= radius:
             nearby.append((planet, dist))
     nearby.sort(key=lambda x: x[1])
-    lines = [f"- {planet} ({dist:.0f} anni luce)" for planet, dist in nearby]
+    lines = [f"- {planet} ({dist:.0f} light-years)" for planet, dist in nearby]
     return (
-        f"Pianeti entro {radius} anni luce da {origin} ({len(nearby)} risultati):\n"
+        f"Planets within {radius} light-years from {origin} ({len(nearby)} results):\n"
         + "\n".join(lines)
     )
 
@@ -50,8 +50,8 @@ def get_distance(planet_a: str, planet_b: str) -> str:
     """Get the distance in light-years between two planets."""
     distances = _load_distances()
     if planet_a not in distances:
-        return f"Pianeta '{planet_a}' non trovato."
+        return f"Planet '{planet_a}' not found."
     if planet_b not in distances[planet_a]:
-        return f"Pianeta '{planet_b}' non trovato."
+        return f"Planet '{planet_b}' not found."
     dist = distances[planet_a][planet_b]
-    return f"Distanza tra {planet_a} e {planet_b}: {dist:.0f} anni luce"
+    return f"Distance between {planet_a} and {planet_b}: {dist:.0f} light-years"
