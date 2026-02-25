@@ -11,6 +11,14 @@ from hackapizza_solution.config import MENUS_JSON
 
 _menus_cache: list[dict] | None = None
 
+# Spelling variants: user/dataset may spell the same ingredient differently.
+# Add pairs as discovered (e.g. Magikarp/Magicarp in menus.json).
+# Format: each key expands to the set of equivalent spellings when matching.
+INGREDIENT_SPELLING_EQUIVALENTS: dict[str, set[str]] = {
+    "magikarp": {"magikarp", "magicarp"},
+    "magicarp": {"magikarp", "magicarp"},
+}
+
 
 def _load_menus() -> list[dict]:
     global _menus_cache
@@ -19,15 +27,31 @@ def _load_menus() -> list[dict]:
     return _menus_cache
 
 
+def _expand_ingredient_search_variants(search: str) -> set[str]:
+    """Return search string and all spelling-equivalent variants for matching."""
+    variants = {search.lower()}
+    for key, equivs in INGREDIENT_SPELLING_EQUIVALENTS.items():
+        key_lower = key.lower()
+        if key_lower in search.lower():
+            for eq in equivs:
+                variants.add(search.lower().replace(key_lower, eq.lower()))
+    return variants
+
+
 @tool
 def search_dishes_by_ingredient(ingredient: str) -> str:
-    """Find all dishes that contain a specific ingredient. Case-insensitive partial match."""
+    """Find all dishes that contain a specific ingredient. Case-insensitive partial match.
+    Uses INGREDIENT_SPELLING_EQUIVALENTS for known spelling variants (e.g. Magikarp/Magicarp)."""
     menus = _load_menus()
     results = []
-    ingredient_lower = ingredient.lower()
+    search_variants = _expand_ingredient_search_variants(ingredient)
     for menu in menus:
         for dish in menu["dishes"]:
-            if any(ingredient_lower in ing.lower() for ing in dish["ingredients"]):
+            ing_lower = [ing_item.lower() for ing_item in dish["ingredients"]]
+            if any(
+                any(sv in i for sv in search_variants) or any(i in sv for sv in search_variants)
+                for i in ing_lower
+            ):
                 results.append(
                     f"- {dish['name']} (restaurant: {menu['restaurant']}, planet: {menu['planet']})"
                 )

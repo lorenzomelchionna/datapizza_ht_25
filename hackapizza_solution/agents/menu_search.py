@@ -15,7 +15,6 @@ from hackapizza_solution.tools.menu_tools import (
     filter_dishes_by_restaurant,
     filter_dishes_by_planet,
     get_chef_info,
-    get_all_dishes_with_details,
 )
 
 
@@ -34,6 +33,6 @@ def create_agent() -> Agent:
             filter_dishes_by_restaurant,
             filter_dishes_by_planet,
             get_chef_info,
-            get_all_dishes_with_details,
         ],
+        max_steps=12,
     )

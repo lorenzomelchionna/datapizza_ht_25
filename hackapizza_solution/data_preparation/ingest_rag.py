@@ -15,7 +15,7 @@ from datapizza.core.vectorstore import VectorConfig
 from datapizza.embedders import ChunkEmbedder
 from datapizza.embedders.cohere import CohereEmbedder
 from datapizza.modules.parsers.docling import DoclingParser
-from datapizza.modules.splitters import RecursiveSplitter
+from datapizza.modules.splitters import RecursiveSplitter, TextSplitter
 from datapizza.pipeline.pipeline import IngestionPipeline
 from datapizza.vectorstores.qdrant import QdrantVectorstore
 from dotenv import load_dotenv
@@ -74,11 +74,9 @@ def ingest_pdf(file_path: Path, collection_name: str):
 def ingest_html_files(directory: Path, collection_name: str):
     """Parse HTML files, split, embed, and store in Qdrant."""
     print(f"\nIngesting HTML from {directory} -> collection '{collection_name}'")
-    splitter = RecursiveSplitter(max_char=2000, overlap=100)
+    splitter = TextSplitter(max_char=2000, overlap=100)
     embedder = _make_embedder()
     vector_store = _make_vector_store(collection_name)
-
-    from datapizza.core.chunk import Chunk
 
     for html_file in sorted(directory.glob("*.html")):
         print(f"  Processing {html_file.name}...")
@@ -87,13 +85,11 @@ def ingest_html_files(directory: Path, collection_name: str):
             html_file.read_text(encoding="utf-8"), "html.parser"
         ).get_text()
 
-        initial_chunk = Chunk(text=text, metadata={"source": html_file.name})
-        split_chunks = splitter.run(chunks=[initial_chunk])
-        embedded_chunks = embedder.run(chunks=split_chunks)
-        vector_store.store(
-            collection_name=collection_name,
-            chunks=embedded_chunks,
-        )
+        split_chunks = splitter.split(text)
+        for chunk in split_chunks:
+            chunk.metadata["source"] = html_file.name
+        embedded_chunks = embedder.run(nodes=split_chunks)
+        vector_store.add(embedded_chunks, collection_name)
     print(f"  Done: HTML files")
 
 

@@ -15,46 +15,68 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from hackapizza_solution.config import DOMANDE_CSV, MENUS_JSON, BLOGPOST_PCT_JSON, DATA_DIR
+from hackapizza_solution.config import (
+    DOMANDE_CSV, MENUS_JSON, BLOGPOST_PCT_JSON, DATA_DIR,
+    QDRANT_HOST, QDRANT_PORT,
+    COLLECTION_CODICE, COLLECTION_MANUALE, COLLECTION_BLOG,
+)
+
+# Valid dish ID range (from dish_mapping.json)
+VALID_ID_MIN, VALID_ID_MAX = 0, 286
+
+
+def _check_qdrant_collections() -> list[str]:
+    """Verify Qdrant is running and required collections exist. Returns list of missing collections."""
+    try:
+        from qdrant_client import QdrantClient
+        client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+        required = [COLLECTION_CODICE, COLLECTION_MANUALE, COLLECTION_BLOG]
+        missing = [c for c in required if not client.collection_exists(c)]
+        return missing
+    except Exception as e:
+        return [f"Qdrant unreachable: {e}"]
 
 
 def extract_ids_from_response(text: str) -> tuple[str, str | None]:
-    """Extract numeric IDs from the LLM response, robust to various formats.
-    Returns (ids_str, zero_cause). zero_cause is None when IDs were found, else a diagnostic string."""
-    # Try to find "IDS: X,Y,Z" pattern first (from our tool)
-    ids_match = re.search(r"IDS:\s*([\d,\s]+)", text)
+    """Extract numeric IDs from the LLM response. Only trusts explicit ID patterns to avoid
+    false positives (e.g. percentages, years, distances). Returns (ids_str, zero_cause)."""
+    def _filter_valid_ids(nums: list[int]) -> list[int]:
+        return sorted(set(n for n in nums if VALID_ID_MIN <= n <= VALID_ID_MAX))
+
+    # Try to find "IDS: X,Y,Z" pattern first (from our formatter tool - explicit output)
+    ids_match = re.search(r"IDS:\s*([\d,\s]+)", text, re.IGNORECASE)
     if ids_match:
         raw = ids_match.group(1)
         nums = [int(x.strip()) for x in raw.split(",") if x.strip().isdigit()]
+        valid = _filter_valid_ids(nums)
+        if valid:
+            return ",".join(str(n) for n in valid), None
         if nums:
-            return ",".join(str(n) for n in sorted(set(nums))), None
-        return "0", "Formatter returned IDS: but no valid IDs in range 0-286"
+            invalid = [n for n in nums if n < VALID_ID_MIN or n > VALID_ID_MAX]
+            return "0", f"Formatter returned IDs outside valid range ({VALID_ID_MIN}-{VALID_ID_MAX}): {invalid[:5]}"
+        return "0", "Formatter returned IDS: but no valid IDs"
 
-    # Fallback: if the entire response is just numbers and commas
+    # Fallback: if the entire response is ONLY numbers and commas (orchestrator passthrough)
     clean = text.strip()
     if re.match(r"^[\d,\s]+$", clean):
         nums = [int(x.strip()) for x in clean.split(",") if x.strip().isdigit()]
+        valid = _filter_valid_ids(nums)
+        if valid:
+            return ",".join(str(n) for n in valid), None
         if nums:
-            return ",".join(str(n) for n in sorted(set(nums))), None
-        return "0", "Response is numeric but empty or invalid"
+            invalid = [n for n in nums if n < VALID_ID_MIN or n > VALID_ID_MAX]
+            return "0", f"Response contains numbers outside valid ID range ({VALID_ID_MIN}-{VALID_ID_MAX}): {invalid[:5]}"
+        return "0", "Response is numeric but empty"
 
-    # Fallback: extract all numbers from the text
-    all_nums = re.findall(r"\b(\d{1,3})\b", text)
-    valid = [int(n) for n in all_nums if 0 <= int(n) <= 286]
-    if valid:
-        return ",".join(str(n) for n in sorted(set(valid))), None
-    if all_nums:
-        invalid = [int(n) for n in all_nums if int(n) > 286 or int(n) < 0]
-        return "0", f"Numbers found but outside valid ID range (0-286): {invalid[:5]}"
-
-    # No numbers at all
+    # No fallback: do NOT extract numbers from free text (avoids false positives from
+    # percentages, distances, years, counts, etc.)
     if not text or not text.strip():
         return "0", "Empty response from LLM"
     if "NOT FOUND" in text or "NON TROVATI" in text:
         return "0", "Dish names not found in mapping (NOT FOUND in response)"
     if "nessun" in text.lower() or "no dish" in text.lower() or "no chef" in text.lower():
         return "0", "Agents reported no matching dishes/chefs"
-    return "0", "No numeric IDs in response - LLM may not have invoked formatter or returned unexpected format"
+    return "0", "No explicit IDs in response - LLM may not have invoked formatter or returned unexpected format"
 
 
 def prepare_data():
@@ -94,6 +116,15 @@ def run_single_question(question: str) -> str:
 
 def run_batch():
     """Process all questions from domande.csv and produce Kaggle CSV."""
+    # Pre-flight: verify Qdrant collections exist
+    missing = _check_qdrant_collections()
+    if missing:
+        print("ERROR: Qdrant pre-flight check failed:")
+        for m in missing:
+            print(f"  - {m}")
+        print("\nRun 'python -m hackapizza_solution.main --prepare' to create collections.")
+        sys.exit(1)
+
     from hackapizza_solution.agents.orchestrator import create_orchestrator
 
     orchestrator = create_orchestrator()
@@ -116,14 +147,37 @@ def run_batch():
 
         start = time.time()
         zero_cause = None
-        try:
-            response = orchestrator.run(question)
-            raw_answer = response.text
-            ids_str, zero_cause = extract_ids_from_response(raw_answer)
-        except Exception as e:
-            raw_answer = f"ERROR: {e}"
-            ids_str = "0"
-            zero_cause = f"Exception during processing: {type(e).__name__}: {e}"
+        raw_answer = ""
+        max_retries = 3
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                response = orchestrator.run(question)
+                raw_answer = response.text
+                ids_str, zero_cause = extract_ids_from_response(raw_answer)
+                break
+            except Exception as e:
+                last_error = e
+                err_str = str(e).lower()
+                # Retry on transient errors (connection refused, timeout, 5xx)
+                is_transient = (
+                    "connection refused" in err_str or "errno 61" in err_str
+                    or "timeout" in err_str or "timed out" in err_str
+                    or "503" in err_str or "502" in err_str or "504" in err_str
+                )
+                if is_transient and attempt < max_retries - 1:
+                    wait = 5 * (attempt + 1)
+                    print(f"  Retry {attempt + 1}/{max_retries - 1} after {wait}s...")
+                    time.sleep(wait)
+                else:
+                    raw_answer = str(e)
+                    ids_str = "0"
+                    err_msg = str(e)
+                    if "404" in err_msg and "doesn't exist" in err_msg.lower():
+                        zero_cause = f"Qdrant collection missing: {err_msg[:150]}... Run --prepare first."
+                    else:
+                        zero_cause = f"Exception during processing: {type(e).__name__}: {e}"
+                    break
         elapsed = time.time() - start
 
         print(f"IDs: {ids_str}")
